@@ -1,5 +1,0 @@
-{
-  "dependencies": {
-    "csurf": "^1.10.0"
-  }
-}
