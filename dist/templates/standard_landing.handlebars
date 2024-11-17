@@ -1,0 +1,7 @@
+<!-- templates/standard_landing.handlebars -->
+<h2>Welcome, standard user {{username}}</h2>
+
+<form action="/logout" method="post">
+    <input type="hidden" name="_csrf" value="{{csrfToken}}">
+    <button type="submit">Logout</button>
+</form>
