@@ -4,6 +4,9 @@ const flash = require('./flash.js')
 const bodyParser = require('body-parser')
 const handlebars = require('express-handlebars')
 const cookieParser = require('cookie-parser')
+const csrf = require('csurf')
+
+const csrfProtection = csrf({ cookie: true });
 
 const app = express();
 app.set('views', __dirname+"/templates")
@@ -13,7 +16,19 @@ let urlencodedParser = bodyParser.urlencoded({extended: false})
 app.use(urlencodedParser)
 app.use(cookieParser())
 
+app.use(csrfProtection);
+
+app.use((err, req, res, next) => {
+    if (err.code === 'EBADCSRFTOKEN') {
+        res.status(403).send('CSRF token validation failed');
+    } else {
+        next(err);
+    }
+});
+
 app.use(bodyParser.urlencoded({ extended: true }));
+
+app.use('/uploads', express.static('uploads')); 
 
 
 app.get('/', (req, res) => {
@@ -31,7 +46,7 @@ app.get('/login', async (req, res) => {
 
     }
     if (!key || sd) {
-        res.render('login', { layout: undefined, message: fm })
+        res.render('login', { layout: undefined, csrfToken: req.csrfToken(), message: fm })
         return
 
     }
@@ -55,7 +70,10 @@ app.post('/login', async (req, res) => {
     }
     let admin = await business.checkAdmin(username, password)
     if (!admin) {
-        let session = await business.startSession({ username: username })
+        let session = await business.startSession({ 
+            username: userType.username, 
+            photo: userType.photo 
+        })
         res.cookie('session', session.sessionKey)
         res.redirect(`/dashboard`)
 
@@ -83,6 +101,7 @@ app.get('/register', async (req, res) => {
     }
     res.render('register', {
         layout: undefined,
+        csrfToken: req.csrfToken(),
         message: fm
     })
 })
@@ -130,8 +149,6 @@ app.post('/register', async (req, res) => {
 
 })
 
-
-
 app.get('/dashboard', async (req, res) => {
     let key = req.cookies.session
     let session = await business.getSessionData(key)
@@ -144,7 +161,11 @@ app.get('/dashboard', async (req, res) => {
         return
     }
     else{
-        res.render('dashboard', { layout: 'main' })
+        res.render('dashboard', {
+            layout: 'main',
+            username: session.data.username,
+            photo: session.data.photo // Pass photo path for navbar
+        });
     }
 })
 
